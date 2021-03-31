@@ -46,7 +46,6 @@ function! Test_Using_Ondemand_Resolve()
 
   call assert_report( "Didn't find the resolve type in the YcmDebugInfo" )
 
-  %bwipeout!
 endfunction
 
 function! Test_ResolveCompletion_OnChange()
@@ -55,9 +54,9 @@ function! Test_ResolveCompletion_OnChange()
   " Only the java completer actually uses the completion resolve
   call youcompleteme#test#setup#OpenFile(
         \ '/third_party/ycmd/ycmd/tests/java/testdata/simple_eclipse_project' .
-        \ '/src/com/test/MethodsWithDocumentation.java', { 'delay': 15 } )
+        \ '/src/com/test/TestWithDocumentation.java', { 'delay': 15 } )
 
-  call setpos( '.', [ 0, 33, 20 ] )
+  call setpos( '.', [ 0, 6, 21 ] )
   " Required to trigger TextChangedI
   " https://github.com/vim/vim/issues/4665#event-2480928194
   call test_override( 'char_avail', 1 )
@@ -106,13 +105,51 @@ function! Test_ResolveCompletion_OnChange()
     endif
   endfunction
 
-  call FeedAndCheckMain( 'C.', funcref( 'Check1' ) )
+  call FeedAndCheckMain( 'cw', funcref( 'Check1' ) )
 
   call assert_false( pumvisible(), 'pumvisible()' )
   call assert_equal( 1, found_getAString )
 
   call test_override( 'ALL', 0 )
-  %bwipeout!
+endfunction
+
+function! Test_Resolve_FixIt()
+  call SkipIf( !exists( '*popup_findinfo' ), 'no popup_findinfo' )
+
+  " Only the java completer actually uses the completion resolve
+  call youcompleteme#test#setup#OpenFile(
+        \ '/third_party/ycmd/ycmd/tests/java/testdata/simple_eclipse_project' .
+        \ '/src/com/test/TestWithDocumentation.java', { 'delay': 15 } )
+
+  " Required to trigger TextChangedI
+  " https://github.com/vim/vim/issues/4665#event-2480928194
+  call test_override( 'char_avail', 1 )
+
+  function! Check1( id )
+    call WaitForCompletion()
+    call CheckCurrentLine( '    Tes' )
+    call CheckCompletionItemsHasItems( [ 'Test - com.youcompleteme' ] )
+    call FeedAndCheckAgain( "\<Tab>", funcref( 'Check2' ) )
+  endfunction
+
+  function! Check2( id )
+    call WaitForCompletion()
+    call CheckCompletionItemsHasItems( [ 'Test - com.youcompleteme' ] )
+    call CheckCurrentLine( '    Test' )
+    call FeedAndCheckAgain( "\<C-y>", funcref( 'Check3' ) )
+  endfunction
+
+  function! Check3( id )
+    call WaitForAssert( {-> assert_false( pumvisible(), 'pumvisible()' ) } )
+    call CheckCurrentLine( '    Test' )
+    call assert_equal( 'import com.youcompleteme.Test;', getline( 3 ) )
+    call feedkeys( "\<Esc>" )
+  endfunction
+
+  call setpos( '.', [ 0, 7, 1 ] )
+  call FeedAndCheckMain( "oTes\<C-space>", funcref( 'Check1' ) )
+
+  call test_override( 'ALL', 0 )
 endfunction
 
 function! Test_DontResolveCompletion_AlreadyResolved()
@@ -121,16 +158,16 @@ function! Test_DontResolveCompletion_AlreadyResolved()
   " Only the java completer actually uses the completion resolve
   call youcompleteme#test#setup#OpenFile(
         \ '/third_party/ycmd/ycmd/tests/java/testdata/simple_eclipse_project' .
-        \ '/src/com/test/MethodsWithDocumentation.java', { 'delay': 15 } )
+        \ '/src/com/test/TestWithDocumentation.java', { 'delay': 15 } )
 
-  call setpos( '.', [ 0, 34, 12 ] )
+  call setpos( '.', [ 0, 7, 12 ] )
   " Required to trigger TextChangedI
   " https://github.com/vim/vim/issues/4665#event-2480928194
   call test_override( 'char_avail', 1 )
 
   function! Check1( id )
     call WaitForCompletion()
-    call CheckCompletionItems( [ 'hashCode' ], 'word' )
+    call CheckCompletionItemsContainsExactly( [ 'hashCode' ], 'word' )
     call s:AssertInfoPopupNotVisible()
     call assert_equal( -1, complete_info().selected )
 
@@ -162,5 +199,4 @@ function! Test_DontResolveCompletion_AlreadyResolved()
   call assert_false( pumvisible(), 'pumvisible()' )
 
   call test_override( 'ALL', 0 )
-  %bwipeout!
 endfunction

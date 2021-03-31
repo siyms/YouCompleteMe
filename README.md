@@ -11,6 +11,21 @@ NOTE: Minimum Requirements Have Changed
 Our policy is to support the Vim version that's in the latest LTS of Ubuntu.
 That's currently Ubuntu 20.04 which contains `vim-nox` at `v8.1.2269`.
 
+For neovim users, 0.4.4 is required.
+
+NOTE: Minimum compiler versions have been increased
+----------------------------------------
+
+In order to provide the best possible performance and stability, ycmd has
+updated its code to C++17. This requires a version bump of the minimum
+supported compilers. The new requirements are:
+
+| Compiler | Current Min |
+|-|-|
+| GCC | 8 |
+| Clang | 7 |
+| MSVC | 15.7 (VS 2017) |
+
 Help, Advice, Support
 ---------------------
 
@@ -218,11 +233,31 @@ officially supported.
 #### Quick start, installing all completers
 
 - Install YCM plugin via [Vundle][]
-- Install cmake, macvim and python; Note that the *system* vim is not supported.
+- Install cmake, macvim and python; Note that the pre-installed *macOS system* vim is not supported.
 
 ```
-brew install cmake macvim python mono go nodejs
+brew install cmake python mono go nodejs
 ```
+
+- For java support you must install a JDK, one way to do this is with homebrew:
+
+```
+$ brew install java
+$ sudo ln -sfn /usr/local/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+```
+
+- Pre-installed macOS *system* Vim does not support Python 3. So you need to install either a Vim that supports Python 3 OR [MacVim][] with [Homebrew][brew]:
+
+  - Option 1: Installing a Vim that supports Python 3
+  
+  ```
+  brew install vim
+  ```
+  - Option 2: Installing [MacVim][]
+  
+  ```
+  brew install macvim
+  ```
 
 - Compile YCM
 
@@ -240,11 +275,15 @@ YouCompleteMe, however they may not work for everyone. If the following
 instructions don't work for you, check out the [full installation
 guide](#full-installation-guide).
 
-[MacVim][] is required. YCM won't work with the pre-installed Vim from Apple as
-its Python support is broken. If you don't already use [MacVim][], install it
+A Vim that supports Python 3 or [MacVim][] is required. YCM won't work with the pre-installed Vim from Apple as
+its Python 3 support is broken. If you don't already use a Vim that supports Python 3 or [MacVim][], install it
 with [Homebrew][brew]. Install CMake as well:
 
-    brew install cmake macvim
+    brew install vim cmake     
+    
+   OR
+
+    brew install macvim cmake
 
 Install YouCompleteMe with [Vundle][].
 
@@ -308,16 +347,23 @@ that are conservatively turned off by default that you may want to turn on.
 
 ### Linux 64-bit
 
+The following assume you're using Ubuntu 20.04.
+
 #### Quick start, installing all completers
 
 - Install YCM plugin via [Vundle][]
 - Install cmake, vim and python
 
 ```
-apt install build-essential cmake vim python3-dev
+apt install build-essential cmake vim-nox python3-dev
 ```
 
-- Install mono-complete, go, node and npm
+- Install mono-complete, go, node, java and npm
+
+```
+apt install mono-complete golang nodejs default-jdk npm
+```
+
 - Compile YCM
 
 ```
@@ -419,7 +465,7 @@ that are conservatively turned off by default that you may want to turn on.
 #### Quick start, installing all completers
 
 - Install YCM plugin via [Vundle][]
-- Install [Visual Studio Build Tools 2017][visual-studio-download]
+- Install [Visual Studio Build Tools 2019][visual-studio-download]
 - Install cmake, vim and python
 - Install go, node and npm
 - Compile YCM
@@ -482,8 +528,8 @@ Download and install the following software:
   matching the version number exactly.
 - [CMake][cmake-download]. Add CMake executable to the PATH environment
   variable.
-- [Visual Studio Build Tools 2017][visual-studio-download]. During setup,
-  select _Visual C++ build tools_ in _Workloads_.
+- [Build Tools for Visual Studio 2019][visual-studio-download]. During setup,
+  select _C++ build tools_ in _Workloads_.
 
 Compiling YCM **with** semantic support for C-family languages through
 **clangd**:
@@ -738,7 +784,6 @@ Quick Feature Summary
 * Type information for identifiers (`GetType`)
 * Renaming symbols (`RefactorRename <new name>`)
 * Code formatting (`Format`)
-* Execute custom server command (`ExecuteCommand <args>`)
 * Management of `rust-analyzer` server instance
 
 ### Java
@@ -1136,6 +1181,10 @@ Gradle projects require a [build.gradle][gradle-project]. Again, there is a
 The format of [build.gradle][gradle-project] files is way beyond the scope of
 this document, but we do recommend using the various tools that can generate
 them for you, if you're not familiar with them already.
+
+Some users have experienced issues with their jdt.ls  when using the Groovy
+language for their build.gradle. As such, try using
+[Kotlin](https://github.com/ycm-core/lsp-examples#kotlin) instead.
 
 #### Troubleshooting
 
@@ -1985,10 +2034,9 @@ flags.
 
 #### The `ExecuteCommand <args>` subcommand
 
-Some LSP completers (currently Rust and Java completers) support executing
-server specific commands. Consult the [rust-analyzer][] and [jdt.ls][] respective
-documentations to find out what commands are supported and which arguments are
-expected.
+Some LSP completers (currently only Java completers) support executing
+server specific commands. Consult the [jdt.ls][] documentation to find out
+what commands are supported and which arguments are expected.
 
 The support for `ExecuteCommand` was implemented to support plugins like
 [vimspector][] to debug java, but isn't limited to that specific use case.
@@ -2341,6 +2389,20 @@ Default: `{'*': 1}`
 let g:ycm_filetype_whitelist = {'*': 1}
 ```
 
+** Completion in buffers with no filetype **
+
+There is one exception to the above rule. YCM supports completion in buffers
+with no filetype set, but this must be _explicitly_ whitelisted. To identify
+buffers with no filetype, we use the `ycm_nofiletype` pseudo-filetype. To enable
+completion in buffers with no filetype, set:
+
+```viml
+let g:ycm_filetype_whitelist = {
+  \ '*': 1,
+  \ 'ycm_nofiletype': 1
+  \ }
+```
+
 ### The `g:ycm_filetype_blacklist` option
 
 This option controls for which Vim filetypes (see `:h filetype`) should YCM be
@@ -2367,6 +2429,10 @@ let g:ycm_filetype_blacklist = {
       \ 'mail': 1
       \}
 ```
+
+In addition, `ycm_nofiletype` (representing buffers with no filetype set)
+is blacklisted if `ycm_nofiletype` is not _explicitly_ whitelisted (using
+`g:ycm_filetype_whitelist`).
 
 ### The `g:ycm_filetype_specific_completion_to_disable` option
 
@@ -3401,7 +3467,7 @@ This software is licensed under the [GPL v3 license][gpl].
 [tsconfig.json]: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html
 [vim-win-download]: https://github.com/vim/vim-win32-installer/releases
 [python-win-download]: https://www.python.org/downloads/windows/
-[visual-studio-download]: https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=15
+[visual-studio-download]: https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16
 [mono-install-macos]: https://www.mono-project.com/docs/getting-started/install/mac/
 [mono-install-linux]: https://www.mono-project.com/download/stable/#download-lin
 [go-install]: https://golang.org/doc/install
